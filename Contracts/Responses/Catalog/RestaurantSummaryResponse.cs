@@ -11,6 +11,7 @@ public class RestaurantSummaryResponse
     public string District { get; set; } = default!;
     public bool HasActiveOffer { get; set; }
     public int EstimatedDeliveryMinutes { get; set; }
+    public double? DistanceMeters { get; set; }
 }
 
 

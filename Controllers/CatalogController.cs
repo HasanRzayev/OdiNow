@@ -25,9 +25,23 @@ public class CatalogController : ControllerBase
 
     [HttpGet("restaurants")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetRestaurants([FromQuery] Guid? categoryId, [FromQuery] string? search, [FromQuery] bool onlyDiscounted, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRestaurants(
+        [FromQuery] Guid? categoryId,
+        [FromQuery] string? search,
+        [FromQuery] bool onlyDiscounted,
+        [FromQuery] double? lat,
+        [FromQuery] double? lng,
+        [FromQuery] double? radiusMeters,
+        CancellationToken cancellationToken)
     {
-        var restaurants = await _catalogService.GetRestaurantsAsync(categoryId, search, onlyDiscounted, cancellationToken);
+        var restaurants = await _catalogService.GetRestaurantsAsync(
+            categoryId,
+            search,
+            onlyDiscounted,
+            lat,
+            lng,
+            radiusMeters,
+            cancellationToken);
         return Ok(restaurants);
     }
 

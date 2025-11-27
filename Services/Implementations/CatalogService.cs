@@ -28,7 +28,14 @@ public class CatalogService : ICatalogService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<RestaurantSummaryResponse>> GetRestaurantsAsync(Guid? categoryId, string? search, bool onlyDiscounted, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<RestaurantSummaryResponse>> GetRestaurantsAsync(
+        Guid? categoryId,
+        string? search,
+        bool onlyDiscounted,
+        double? latitude,
+        double? longitude,
+        double? radiusMeters,
+        CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         var restaurantsQuery = _dbContext.Restaurants
@@ -51,25 +58,90 @@ public class CatalogService : ICatalogService
             restaurantsQuery = restaurantsQuery.Where(r => r.Offers.Any(o => o.IsActive && o.StartAt <= now && o.EndAt >= now));
         }
 
-        return await restaurantsQuery
-            .OrderByDescending(r => r.Offers.Any(o => o.IsActive && o.StartAt <= now && o.EndAt >= now))
-            .ThenByDescending(r => r.AverageRating)
-            .Select(r => new RestaurantSummaryResponse
+        var restaurants = await restaurantsQuery
+            .Select(r => new
             {
-                Id = r.Id,
-                Name = r.Name,
-                Description = r.Description,
-                AverageRating = r.AverageRating,
-                TotalReviews = r.TotalReviews,
-                City = r.City,
-                District = r.District,
+                r.Id,
+                r.Name,
+                r.Description,
+                r.AverageRating,
+                r.TotalReviews,
+                r.City,
+                r.District,
+                r.Latitude,
+                r.Longitude,
                 HasActiveOffer = r.Offers.Any(o => o.IsActive && o.StartAt <= now && o.EndAt >= now),
                 EstimatedDeliveryMinutes = r.MenuItems.Any()
                     ? (int)r.MenuItems.Average(mi => mi.PreparationTimeMinutes)
                     : 30
             })
             .ToListAsync(cancellationToken);
+
+        var maxRadius = radiusMeters.HasValue ? Math.Clamp(radiusMeters.Value, 100, 50000) : (double?)null;
+
+        var projected = restaurants
+            .Select(r =>
+            {
+                double? distance = null;
+                if (latitude.HasValue && longitude.HasValue && r.Latitude.HasValue && r.Longitude.HasValue)
+                {
+                    distance = HaversineDistance(r.Latitude.Value, r.Longitude.Value, latitude.Value, longitude.Value);
+                }
+
+                return new
+                {
+                    r.Id,
+                    r.Name,
+                    r.Description,
+                    r.AverageRating,
+                    r.TotalReviews,
+                    r.City,
+                    r.District,
+                    r.HasActiveOffer,
+                    r.EstimatedDeliveryMinutes,
+                    DistanceMeters = distance
+                };
+            });
+
+        if (maxRadius.HasValue && latitude.HasValue && longitude.HasValue)
+        {
+            projected = projected.Where(p => p.DistanceMeters.HasValue && p.DistanceMeters.Value <= maxRadius.Value);
+        }
+
+        return projected
+            .OrderByDescending(p => p.HasActiveOffer)
+            .ThenBy(p => p.DistanceMeters ?? double.MaxValue)
+            .ThenByDescending(p => p.AverageRating)
+            .Select(p => new RestaurantSummaryResponse
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                AverageRating = p.AverageRating,
+                TotalReviews = p.TotalReviews,
+                City = p.City,
+                District = p.District,
+                HasActiveOffer = p.HasActiveOffer,
+                EstimatedDeliveryMinutes = p.EstimatedDeliveryMinutes,
+                DistanceMeters = p.DistanceMeters
+            })
+            .ToList();
     }
+
+    private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371000; // Earth radius in meters
+        double dLat = DegreesToRadians(lat2 - lat1);
+        double dLon = DegreesToRadians(lon2 - lon1);
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                   Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
+    }
+
+    private static double DegreesToRadians(double degrees)
+        => degrees * (Math.PI / 180);
 
     public async Task<RestaurantDetailResponse?> GetRestaurantDetailsAsync(Guid id, CancellationToken cancellationToken = default)
     {
