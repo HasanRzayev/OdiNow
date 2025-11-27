@@ -49,11 +49,26 @@ public class TicketGenerationService : BackgroundService
     private async Task GenerateDropIfNeededAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var hasActiveDrop = await context.TicketDrops
-            .AnyAsync(td => td.IsActive && td.TicketsRemaining > 0 && td.ExpiresAt > now, cancellationToken);
+        await ExpireStaleDropsAsync(context, now, cancellationToken);
 
-        if (hasActiveDrop)
+        var activeCount = await context.TicketDrops
+            .CountAsync(td => td.IsActive && td.TicketsRemaining > 0 && td.ExpiresAt > now, cancellationToken);
+
+        if (activeCount >= _options.MaxActiveTickets)
         {
+            _logger.LogDebug("Active ticket limit ({Limit}) reached, skipping generation.", _options.MaxActiveTickets);
+            return;
+        }
+
+        var lastDropCreatedAt = await context.TicketDrops
+            .OrderByDescending(td => td.CreatedAt)
+            .Select(td => (DateTimeOffset?)td.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (lastDropCreatedAt.HasValue &&
+            lastDropCreatedAt.Value.AddMinutes(_options.GenerationIntervalMinutes) > now)
+        {
+            _logger.LogDebug("Next ticket drop scheduled for {NextTime}", lastDropCreatedAt.Value.AddMinutes(_options.GenerationIntervalMinutes));
             return;
         }
 
@@ -63,6 +78,7 @@ public class TicketGenerationService : BackgroundService
 
         if (!eligibleOffers.Any())
         {
+            _logger.LogDebug("No active offers available for ticket generation.");
             return;
         }
 
@@ -83,6 +99,41 @@ public class TicketGenerationService : BackgroundService
         await context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Generated ticket drop {DropId} for offer {OfferId}", drop.Id, offer.Id);
+    }
+
+    private static async Task ExpireStaleDropsAsync(ApplicationDbContext context, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var expiredDrops = await context.TicketDrops
+            .Where(td => td.IsActive && td.ExpiresAt <= now)
+            .ToListAsync(cancellationToken);
+
+        if (expiredDrops.Count > 0)
+        {
+            foreach (var drop in expiredDrops)
+            {
+                drop.IsActive = false;
+                drop.TicketsRemaining = 0;
+            }
+        }
+
+        var expiredClaims = await context.TicketClaims
+            .Include(tc => tc.TicketDrop)
+            .Where(tc => tc.Status == TicketClaimStatus.Claimed && tc.TicketDrop.ExpiresAt <= now)
+            .ToListAsync(cancellationToken);
+
+        if (expiredClaims.Count > 0)
+        {
+            foreach (var claim in expiredClaims)
+            {
+                claim.Status = TicketClaimStatus.Expired;
+                claim.ExpiredAt = now;
+            }
+        }
+
+        if (expiredDrops.Count > 0 || expiredClaims.Count > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 }
 

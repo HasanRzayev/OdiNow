@@ -9,6 +9,8 @@ public class TicketOptions
     public int DropDurationMinutes { get; set; } = 30;
 
     public int TicketsPerInterval { get; set; } = 1;
+
+    public int MaxActiveTickets { get; set; } = 5;
 }
 
 
