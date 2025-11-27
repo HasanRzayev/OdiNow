@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddAutoMapper(typeof(ApplicationProfile));
         services.AddFluentValidationAutoValidation();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<TicketOptions>(configuration.GetSection(TicketOptions.SectionName));
 
         services.AddHttpContextAccessor();
 
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IOfferService, OfferService>();
+        services.AddScoped<ITicketService, TicketService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -48,6 +50,7 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddAuthorization();
+        services.AddHostedService<TicketGenerationService>();
 
         return services;
     }

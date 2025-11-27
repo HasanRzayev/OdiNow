@@ -24,6 +24,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserSetting> UserSettings => Set<UserSetting>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<TicketDrop> TicketDrops => Set<TicketDrop>();
+    public DbSet<TicketClaim> TicketClaims => Set<TicketClaim>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +62,23 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<CouponView>()
             .HasIndex(c => new { c.UserId, c.OfferId });
+
+        modelBuilder.Entity<TicketDrop>()
+            .HasIndex(td => new { td.IsActive, td.AvailableFrom });
+
+        modelBuilder.Entity<TicketDrop>()
+            .HasMany(td => td.Claims)
+            .WithOne(tc => tc.TicketDrop)
+            .HasForeignKey(tc => tc.TicketDropId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TicketClaim>()
+            .HasIndex(tc => new { tc.UserId, tc.TicketDropId })
+            .IsUnique();
+
+        modelBuilder.Entity<TicketClaim>()
+            .HasIndex(tc => tc.Code)
+            .IsUnique();
 
         modelBuilder.Entity<Order>()
             .HasIndex(o => o.OrderNumber)
@@ -119,6 +138,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<Restaurant>()
             .Property(r => r.AverageRating)
             .HasPrecision(3, 2);
+
+        modelBuilder.Entity<TicketDrop>()
+            .Property(td => td.TicketsTotal)
+            .HasDefaultValue(1);
+
+        modelBuilder.Entity<TicketDrop>()
+            .Property(td => td.TicketsRemaining)
+            .HasDefaultValue(1);
     }
 }
 
