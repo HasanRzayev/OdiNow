@@ -1,0 +1,6 @@
+@OdiNow_HostAddress = http://localhost:5023
+
+GET {{OdiNow_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
