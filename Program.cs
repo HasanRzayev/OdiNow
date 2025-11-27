@@ -33,6 +33,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enable");
+
 var app = builder.Build();
 
 // Ensure database is created, apply migrations, and seed data
@@ -63,7 +65,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || swaggerEnabled)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
