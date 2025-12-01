@@ -21,7 +21,9 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",
-                "https://localhost:5173")
+                "https://localhost:5173",
+                "http://localhost:5174",
+                "https://localhost:5174")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -32,8 +34,6 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enable");
 
 var app = builder.Build();
 
@@ -65,7 +65,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || swaggerEnabled)
+// CORS must be FIRST to handle preflight OPTIONS requests
+app.UseCors("FrontendPolicy");
+
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -74,8 +77,6 @@ if (app.Environment.IsDevelopment() || swaggerEnabled)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
-
-app.UseCors("FrontendPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -54,12 +54,10 @@ public enum VerificationChannel
     Email = 2
 }
 
-public enum TicketClaimStatus
+public enum TicketStatus
 {
-    Claimed = 0,
-    Redeemed = 1,
-    Expired = 2,
-    Cancelled = 3
+    Available = 0,
+    Used = 1
 }
 
 

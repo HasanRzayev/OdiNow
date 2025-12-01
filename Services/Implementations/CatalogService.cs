@@ -37,10 +37,13 @@ public class CatalogService : ICatalogService
         double? radiusMeters,
         CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
-        var restaurantsQuery = _dbContext.Restaurants
-            .AsNoTracking()
-            .Where(r => !r.IsDeleted);
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var restaurantsQuery = _dbContext.Restaurants
+                .AsNoTracking()
+                .Where(r => !r.IsDeleted)
+                .AsQueryable();
 
         if (categoryId.HasValue)
         {
@@ -68,6 +71,8 @@ public class CatalogService : ICatalogService
                 r.TotalReviews,
                 r.City,
                 r.District,
+                r.AddressLine,
+                r.ImageUrl,
                 r.Latitude,
                 r.Longitude,
                 HasActiveOffer = r.Offers.Any(o => o.IsActive && o.StartAt <= now && o.EndAt >= now),
@@ -97,6 +102,8 @@ public class CatalogService : ICatalogService
                     r.TotalReviews,
                     r.City,
                     r.District,
+                    r.AddressLine,
+                    r.ImageUrl,
                     r.HasActiveOffer,
                     r.EstimatedDeliveryMinutes,
                     DistanceMeters = distance
@@ -121,11 +128,19 @@ public class CatalogService : ICatalogService
                 TotalReviews = p.TotalReviews,
                 City = p.City,
                 District = p.District,
+                AddressLine = p.AddressLine,
+                ImageUrl = p.ImageUrl,
                 HasActiveOffer = p.HasActiveOffer,
                 EstimatedDeliveryMinutes = p.EstimatedDeliveryMinutes,
                 DistanceMeters = p.DistanceMeters
             })
             .ToList();
+        }
+        catch (Exception ex)
+        {
+            // Log error here if you have logging
+            throw new InvalidOperationException($"Error retrieving restaurants: {ex.Message}", ex);
+        }
     }
 
     private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)

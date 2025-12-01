@@ -58,11 +58,17 @@ public class OrderService : IOrderService
             OrderNumber = GenerateOrderNumber(),
             ReservationCode = GenerateReservationCode(),
             ReservationExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            // QR kodu sifariş yaradılarkən generasiya edirik ki, həm backend-də yadda qalsın,
+            // həm də frontend eyni dəyəri istifadə etsin
+            QrCode = null, // müvəqqəti, aşağıda doldurulacaq
             DepositAmount = decimal.Round(deposit, 2),
             RemainingAmount = decimal.Round(remaining, 2),
             Notes = request.Notes,
             Items = orderItems
         };
+
+        // QR kod dəyərini OrderNumber və ReservationCode əsasında generasiya edirik
+        order.QrCode = $"ORDER-{order.OrderNumber}-{order.ReservationCode}";
 
         await _dbContext.Orders.AddAsync(order, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);

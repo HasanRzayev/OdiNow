@@ -16,6 +16,13 @@ public class ExceptionHandlingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip exception handling for OPTIONS requests (CORS preflight)
+        if (context.Request.Method == "OPTIONS")
+        {
+            await _next(context);
+            return;
+        }
+
         try
         {
             await _next(context);

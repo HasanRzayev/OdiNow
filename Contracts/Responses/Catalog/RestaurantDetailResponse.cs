@@ -15,6 +15,9 @@ public class RestaurantDetailResponse
     public int TotalReviews { get; set; }
     public TimeSpan OpeningTime { get; set; }
     public TimeSpan ClosingTime { get; set; }
+    public string? ImageUrl { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public IEnumerable<RestaurantAttributeResponse> Attributes { get; set; } = Array.Empty<RestaurantAttributeResponse>();
     public IEnumerable<MenuItemResponse> MenuItems { get; set; } = Array.Empty<MenuItemResponse>();
     public IEnumerable<OfferResponse> ActiveOffers { get; set; } = Array.Empty<OfferResponse>();

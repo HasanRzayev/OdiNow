@@ -9,6 +9,8 @@ public class RestaurantSummaryResponse
     public int TotalReviews { get; set; }
     public string City { get; set; } = default!;
     public string District { get; set; } = default!;
+    public string? AddressLine { get; set; }
+    public string? ImageUrl { get; set; }
     public bool HasActiveOffer { get; set; }
     public int EstimatedDeliveryMinutes { get; set; }
     public double? DistanceMeters { get; set; }

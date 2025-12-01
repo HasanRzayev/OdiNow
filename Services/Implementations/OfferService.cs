@@ -19,21 +19,67 @@ public class OfferService : IOfferService
         _mapper = mapper;
     }
 
-    public async Task<IEnumerable<OfferDetailResponse>> GetOffersAsync(bool includeInactive, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<OfferDetailResponse>> GetOffersAsync(bool includeInactive, double? latitude = null, double? longitude = null, double? radiusMeters = null, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Offers
-            .AsNoTracking()
-            .Include(o => o.Restaurant)
-            .Include(o => o.MenuItem)
-            .AsQueryable();
-        if (!includeInactive)
+        try
         {
-            var now = DateTimeOffset.UtcNow;
-            query = query.Where(o => o.IsActive && o.StartAt <= now && o.EndAt >= now);
+            var query = _dbContext.Offers
+                .AsNoTracking()
+                .Include(o => o.Restaurant)
+                .Include(o => o.MenuItem)
+                .Where(o => o.Restaurant != null && !o.Restaurant.IsDeleted)
+                .AsQueryable();
+            
+            if (!includeInactive)
+            {
+                var now = DateTimeOffset.UtcNow;
+                query = query.Where(o => o.IsActive && o.StartAt <= now && o.EndAt >= now);
+            }
+
+            var offers = await query.OrderByDescending(o => o.StartAt).ToListAsync(cancellationToken);
+            var mapped = offers.Select(MapOffer).Where(o => o != null).ToList();
+
+        if (latitude.HasValue && longitude.HasValue && radiusMeters.HasValue)
+        {
+            var maxRadius = Math.Clamp(radiusMeters.Value, 100, 50000);
+            
+            // Filter offers by distance
+            var filtered = mapped
+                .Where(o =>
+                {
+                    if (o.RestaurantLatitude.HasValue && o.RestaurantLongitude.HasValue)
+                    {
+                        var distance = HaversineDistance(
+                            latitude.Value, longitude.Value,
+                            o.RestaurantLatitude.Value, o.RestaurantLongitude.Value);
+                        return distance <= maxRadius;
+                    }
+                    // If restaurant has no coordinates, exclude it from nearby results
+                    return false;
+                })
+                .OrderBy(o =>
+                {
+                    if (o.RestaurantLatitude.HasValue && o.RestaurantLongitude.HasValue)
+                    {
+                        return HaversineDistance(
+                            latitude.Value, longitude.Value,
+                            o.RestaurantLatitude.Value, o.RestaurantLongitude.Value);
+                    }
+                    return double.MaxValue;
+                })
+                .ToList();
+            
+            // Return filtered results only if we have GPS coordinates
+            return filtered;
         }
 
-        var offers = await query.OrderByDescending(o => o.StartAt).ToListAsync(cancellationToken);
-        return offers.Select(MapOffer).ToList();
+            return mapped;
+        }
+        catch (Exception ex)
+        {
+            // Log error here if you have logging
+            throw new InvalidOperationException($"Error retrieving offers: {ex.Message}", ex);
+        }
     }
 
     public async Task<OfferDetailResponse?> GetOfferAsync(Guid id, CancellationToken cancellationToken = default)
@@ -150,8 +196,13 @@ public class OfferService : IOfferService
         return true;
     }
 
-    private static OfferDetailResponse MapOffer(Offer offer)
+    private static OfferDetailResponse? MapOffer(Offer offer)
     {
+        if (offer == null)
+        {
+            return null;
+        }
+
         return new OfferDetailResponse
         {
             Id = offer.Id,
@@ -164,10 +215,28 @@ public class OfferService : IOfferService
             IsActive = offer.IsActive,
             RestaurantId = offer.RestaurantId,
             RestaurantName = offer.Restaurant?.Name,
+            RestaurantLatitude = offer.Restaurant?.Latitude,
+            RestaurantLongitude = offer.Restaurant?.Longitude,
+            RestaurantAddress = offer.Restaurant != null ? $"{offer.Restaurant.AddressLine}, {offer.Restaurant.District}, {offer.Restaurant.City}" : null,
             MenuItemId = offer.MenuItemId,
             MenuItemTitle = offer.MenuItem?.Title
         };
     }
+
+    private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371000; // Earth radius in meters
+        double dLat = DegreesToRadians(lat2 - lat1);
+        double dLon = DegreesToRadians(lon2 - lon1);
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                   Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
+    }
+
+    private static double DegreesToRadians(double degrees)
+        => degrees * (Math.PI / 180);
 
     private async Task ValidateOfferReferencesAsync(Guid? restaurantId, Guid? menuItemId, CancellationToken cancellationToken)
     {

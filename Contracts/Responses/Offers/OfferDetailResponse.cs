@@ -12,6 +12,9 @@ public class OfferDetailResponse
     public bool IsActive { get; set; }
     public Guid? RestaurantId { get; set; }
     public string? RestaurantName { get; set; }
+    public double? RestaurantLatitude { get; set; }
+    public double? RestaurantLongitude { get; set; }
+    public string? RestaurantAddress { get; set; }
     public Guid? MenuItemId { get; set; }
     public string? MenuItemTitle { get; set; }
 }

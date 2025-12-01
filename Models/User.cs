@@ -61,6 +61,10 @@ public class User
 
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
 
+    public ICollection<UserTicket> Tickets { get; set; } = new List<UserTicket>();
+
+    public ICollection<CancellationRight> CancellationRights { get; set; } = new List<CancellationRight>();
+
     public UserSetting? Setting { get; set; }
 }
 

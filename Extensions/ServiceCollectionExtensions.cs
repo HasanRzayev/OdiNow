@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IOfferService, OfferService>();
         services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<ICancellationRightsService, CancellationRightsService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -50,7 +51,6 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddAuthorization();
-        services.AddHostedService<TicketGenerationService>();
 
         return services;
     }

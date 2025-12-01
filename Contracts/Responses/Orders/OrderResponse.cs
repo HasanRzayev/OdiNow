@@ -12,6 +12,8 @@ public class OrderResponse
     public decimal DepositAmount { get; set; }
     public decimal RemainingAmount { get; set; }
     public string? ReservationCode { get; set; }
+    public DateTimeOffset? ReservationExpiresAt { get; set; }
+    public string? QrCode { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public IEnumerable<OrderItemResponse> Items { get; set; } = Array.Empty<OrderItemResponse>();
 }

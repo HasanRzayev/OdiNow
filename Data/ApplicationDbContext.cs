@@ -24,8 +24,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserSetting> UserSettings => Set<UserSetting>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
-    public DbSet<TicketDrop> TicketDrops => Set<TicketDrop>();
-    public DbSet<TicketClaim> TicketClaims => Set<TicketClaim>();
+    public DbSet<UserTicket> UserTickets => Set<UserTicket>();
+    public DbSet<CancellationRight> CancellationRights => Set<CancellationRight>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,22 +63,35 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<CouponView>()
             .HasIndex(c => new { c.UserId, c.OfferId });
 
-        modelBuilder.Entity<TicketDrop>()
-            .HasIndex(td => new { td.IsActive, td.AvailableFrom });
+        modelBuilder.Entity<UserTicket>()
+            .HasIndex(t => new { t.UserId, t.Status });
 
-        modelBuilder.Entity<TicketDrop>()
-            .HasMany(td => td.Claims)
-            .WithOne(tc => tc.TicketDrop)
-            .HasForeignKey(tc => tc.TicketDropId)
+        modelBuilder.Entity<UserTicket>()
+            .HasOne(t => t.User)
+            .WithMany(u => u.Tickets)
+            .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<TicketClaim>()
-            .HasIndex(tc => new { tc.UserId, tc.TicketDropId })
-            .IsUnique();
+        modelBuilder.Entity<UserTicket>()
+            .HasOne(t => t.Offer)
+            .WithMany()
+            .HasForeignKey(t => t.OfferId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<TicketClaim>()
-            .HasIndex(tc => tc.Code)
-            .IsUnique();
+        modelBuilder.Entity<CancellationRight>()
+            .HasIndex(c => new { c.UserId, c.IsUsed });
+
+        modelBuilder.Entity<CancellationRight>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CancellationRight>()
+            .HasOne(c => c.Order)
+            .WithMany()
+            .HasForeignKey(c => c.OrderId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Order>()
             .HasIndex(o => o.OrderNumber)
@@ -138,14 +151,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<Restaurant>()
             .Property(r => r.AverageRating)
             .HasPrecision(3, 2);
-
-        modelBuilder.Entity<TicketDrop>()
-            .Property(td => td.TicketsTotal)
-            .HasDefaultValue(1);
-
-        modelBuilder.Entity<TicketDrop>()
-            .Property(td => td.TicketsRemaining)
-            .HasDefaultValue(1);
     }
 }
 

@@ -34,15 +34,22 @@ public class CatalogController : ControllerBase
         [FromQuery] double? radiusMeters,
         CancellationToken cancellationToken)
     {
-        var restaurants = await _catalogService.GetRestaurantsAsync(
-            categoryId,
-            search,
-            onlyDiscounted,
-            lat,
-            lng,
-            radiusMeters,
-            cancellationToken);
-        return Ok(restaurants);
+        try
+        {
+            var restaurants = await _catalogService.GetRestaurantsAsync(
+                categoryId,
+                search,
+                onlyDiscounted,
+                lat,
+                lng,
+                radiusMeters,
+                cancellationToken);
+            return Ok(restaurants);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, details = ex.InnerException?.Message });
+        }
     }
 
     [HttpGet("restaurants/{id:guid}")]

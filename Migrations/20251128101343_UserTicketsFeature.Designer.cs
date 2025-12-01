@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OdiNow.Data;
 
@@ -11,9 +12,11 @@ using OdiNow.Data;
 namespace OdiNow.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128101343_UserTicketsFeature")]
+    partial class UserTicketsFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,41 +50,6 @@ namespace OdiNow.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("OdiNow.Models.CancellationRight", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("GeneratedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid?>("OrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("UsedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("UserId1")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("UserId1");
-
-                    b.HasIndex("UserId", "IsUsed");
-
-                    b.ToTable("CancellationRights");
                 });
 
             modelBuilder.Entity("OdiNow.Models.Category", b =>
@@ -570,9 +538,6 @@ namespace OdiNow.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
 
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -888,28 +853,6 @@ namespace OdiNow.Migrations
                     b.ToTable("UserTickets");
                 });
 
-            modelBuilder.Entity("OdiNow.Models.CancellationRight", b =>
-                {
-                    b.HasOne("OdiNow.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("OdiNow.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OdiNow.Models.User", null)
-                        .WithMany("CancellationRights")
-                        .HasForeignKey("UserId1");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("OdiNow.Models.CouponView", b =>
                 {
                     b.HasOne("OdiNow.Models.Offer", "Offer")
@@ -1204,8 +1147,6 @@ namespace OdiNow.Migrations
             modelBuilder.Entity("OdiNow.Models.User", b =>
                 {
                     b.Navigation("Addresses");
-
-                    b.Navigation("CancellationRights");
 
                     b.Navigation("CouponViews");
 
